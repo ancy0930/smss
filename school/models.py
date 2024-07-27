@@ -31,7 +31,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
-    password = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
 
@@ -68,12 +67,17 @@ class Enrollment(models.Model):
 class Grade(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    grade = models.CharField(max_length=10)
+    grade = models.CharField(
+        max_length=2
+    )  # Adjusted max_length if grade is a single character like "A", "B", etc.
 
 
 class Exam(models.Model):
     name = models.CharField(max_length=100)
     date = models.DateField()
+
+    def __str__(self):
+        return self.name
 
 
 class Result(models.Model):

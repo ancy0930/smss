@@ -2,18 +2,31 @@ from rest_framework import serializers
 from .models import *
 
 
+from rest_framework import serializers
+from .models import User
+
+
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)  # Ensure password is write-only
+
     class Meta:
         model = User
         fields = ["first_name", "last_name", "email", "username", "password"]
 
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
+        # Extract password from validated data
+        password = validated_data.pop("password")
+        # Create user instance without saving to the database
+        user = User(**validated_data)
+        # Set password with proper hashing
+        user.set_password(password)
+        # Save the user instance
+        user.save()
         return user
 
 
 class StudentSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
+    user = UserSerializer()  # Nested serializer to include all User fields
 
     class Meta:
         model = Student
@@ -24,6 +37,12 @@ class StudentSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**user_data)
         student = Student.objects.create(user=user, **validated_data)
         return student
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation["user_id"] = instance.user.id
+        representation["username"] = instance.user.username
+        return representation
 
 
 class SubjectSerializer(serializers.ModelSerializer):
@@ -67,15 +86,19 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+from rest_framework import serializers
+from .models import Exam
+
+
 class ExamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exam
-        fields = ["name", "date"]
+        fields = ["id", "name", "date"]
 
 
 class ResultSerializer(serializers.ModelSerializer):
     student = serializers.PrimaryKeyRelatedField(queryset=Student.objects.all())
-    exam = serializers.PrimaryKeyRelatedField(queryset=Exam.objects.all())
+    exam = ExamSerializer()  # Use ExamSerializer for output
 
     class Meta:
         model = Result
